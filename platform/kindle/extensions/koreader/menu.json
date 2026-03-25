@@ -1,61 +1,61 @@
 {
 	"items": [
 	{
-		"name": "KOReader",
+		"name": "Bookwise",
 		"priority": 0,
 		"items": [
 		{
-			"name": "Start KOReader",
+			"name": "Start Bookwise",
 			"if": "\"KindleVoyage\" -m!",
 			"priority": 2,
 			"action": "/mnt/us/koreader/koreader.sh",
 			"params": "--kual",
 			"status": false,
-			"internal": "status Start KOReader"
+			"internal": "status Start Bookwise"
 		},
 		{
-			"name": "Start KOReader",
+			"name": "Start Bookwise",
 			"if": "\"KindleVoyage\" -m",
 			"priority": 2,
 			"action": "/mnt/us/koreader/koreader.sh",
 			"params": "--kual",
 			"exitmenu": false,
 			"status": false,
-			"internal": "status Start KOReader"
+			"internal": "status Start Bookwise"
 		},
 		{
-			"name": "Start KOReader (no framework)",
+			"name": "Start Bookwise (no framework)",
 			"priority": 4,
 			"action": "/mnt/us/koreader/koreader.sh",
 			"params": "--kual --framework_stop",
 			"status": false,
-			"internal": "status Kill the framework and start KOReader"
+			"internal": "status Kill the framework and start Bookwise"
 		},
 		{
-			"name": "Start KOReader (ASAP)",
+			"name": "Start Bookwise (ASAP)",
 			"if": "\"KindleVoyage\" -m!",
 			"priority": 6,
 			"action": "/mnt/us/koreader/koreader.sh",
 			"params": "--kual --asap",
 			"status": false,
-			"internal": "status Start KOReader ASAP"
+			"internal": "status Start Bookwise ASAP"
 		},
 		{
-			"name": "Start KOReader (ASAP)",
+			"name": "Start Bookwise (ASAP)",
 			"if": "\"KindleVoyage\" -m",
 			"priority": 6,
 			"action": "/mnt/us/koreader/koreader.sh",
 			"params": "--kual --asap",
 			"exitmenu": false,
 			"status": false,
-			"internal": "status Start KOReader ASAP"
+			"internal": "status Start Bookwise ASAP"
 		},
 		{
 			"name": "Tools",
 			"priority": 7,
 			"items": [
 			{
-				"name": "Update KOReader",
+				"name": "Update Bookwise",
 				"priority": 1,
 				"action": "./bin/koreader-ext.sh",
 				"params": "update_koreader",
@@ -63,10 +63,10 @@
 				"checked": true,
 				"refresh": false,
 				"status": false,
-				"internal": "status Try to update KOReader . . ."
+				"internal": "status Try to update Bookwise . . ."
 			},
 			{
-				"name": "Clean Install of KOReader",
+				"name": "Clean Install of Bookwise",
 				"priority": 2,
 				"action": "./bin/koreader-ext.sh",
 				"params": "install_koreader",
@@ -74,7 +74,7 @@
 				"checked": true,
 				"refresh": false,
 				"status": false,
-				"internal": "status Try to install KOReader from scratch . . ."
+				"internal": "status Try to install Bookwise from scratch . . ."
 			}
 			]
 		}

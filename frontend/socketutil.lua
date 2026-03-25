@@ -19,7 +19,7 @@ local socketutil = {
 
 --- Builds a sensible UserAgent that fits Wikipedia's UA policy <https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy>
 local socket_ua = http.USERAGENT
-socketutil.USER_AGENT = T("KOReader/%1 (%2; %3; %4; https://github.com/koreader/koreader) %5",
+socketutil.USER_AGENT = T("Bookwise/%1 (%2; %3; %4; https://github.com/underscorelior/bookwise-koreader) %5",
     Version:getShortVersion(), Device.model, jit.os, jit.arch, socket_ua:gsub(" ", "/"))
 -- Monkey-patch it in LuaSocket, as it already takes care of inserting the appropriate header to its requests.
 http.USERAGENT = socketutil.USER_AGENT

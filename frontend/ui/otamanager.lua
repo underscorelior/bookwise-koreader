@@ -167,7 +167,7 @@ function OTAManager:fetchAndProcessUpdate()
 
     if ota_version == 0 then
         UIManager:show(InfoMessage:new{
-            text = _("KOReader is up to date."),
+            text = _("Bookwise is up to date."),
         })
     elseif ota_version == -1 then
         UIManager:show(InfoMessage:new{
@@ -243,7 +243,7 @@ function OTAManager:fetchAndProcessUpdate()
                                 os.execute("./fbink -q -y -7 -pm ' '  ' '")
                             end
                             UIManager:show(MultiConfirmBox:new{
-                                text = _("Failed to update KOReader.\n\nYou can:\nCancel, keeping temporary files.\nRetry the update process with a full download.\nAbort and cleanup all temporary files."),
+                                text = _("Failed to update Bookwise.\n\nYou can:\nCancel, keeping temporary files.\nRetry the update process with a full download.\nAbort and cleanup all temporary files."),
                                 choice1_text = _("Retry"),
                                 choice1_callback = function()
                                     UIManager:show(InfoMessage:new{
@@ -269,7 +269,7 @@ function OTAManager:fetchAndProcessUpdate()
                                                 os.execute("./fbink -q -y -7 -pm ' '  ' '")
                                             end
                                             UIManager:show(ConfirmBox:new{
-                                                text = _("Error updating KOReader. Would you like to delete temporary files?"),
+                                                text = _("Error updating Bookwise. Would you like to delete temporary files?"),
                                                 ok_callback = function()
                                                     os.execute("rm -f " .. ota_dir .. "ko*")
                                                 end,

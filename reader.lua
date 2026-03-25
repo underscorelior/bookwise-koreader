@@ -8,13 +8,14 @@ os.setlocale("C", "numeric")
 io.write([[
 ---------------------------------------------
                 launching...
-  _  _____  ____                _
- | |/ / _ \|  _ \ ___  __ _  __| | ___ _ __
- | ' / | | | |_) / _ \/ _` |/ _` |/ _ \ '__|
- | . \ |_| |  _ <  __/ (_| | (_| |  __/ |
- |_|\_\___/|_| \_\___|\__,_|\__,_|\___|_|
 
- It's a scroll... It's a codex... It's KOReader!
+  ____              _            _
+ | __ )  ___   ___ | | ____      _(_)___  ___
+ |  _ \ / _ \ / _ \| |/ /\ \ /\ / / / __|/ _ \
+ | |_) | (_) | (_) |   <  \ V  V /| \__ \  __/
+ |____/ \___/ \___/|_|\_\  \_/\_/ |_|___/\___|
+
+ Your books, everywhere.
 
  [*] Current time: ]], os.date("%x-%X"), "\n")
 
@@ -83,7 +84,7 @@ local longopts = {
 
 local function showusage()
     print("usage: ./reader.lua [OPTION] ... path")
-    print("Read all the books on your E-Ink reader")
+    print("Bookwise - Read all the books on your Kindle")
     print("")
     print("-d               start in debug mode")
     print("-v               debug in verbose mode")
@@ -95,8 +96,8 @@ local function showusage()
     print("")
     print("If you don't pass any path, the File Manager will be opened")
     print("")
-    print("This software is licensed under the AGPLv3.")
-    print("See http://github.com/koreader/koreader for more info.")
+    print("Powered by KOReader. Licensed under the AGPLv3.")
+    print("See https://github.com/underscorelior/bookwise-koreader for more info.")
 end
 
 local function getPathFromURI(str)
@@ -227,7 +228,7 @@ local exit_code
 if not Device:isStartupScriptUpToDate() then
     local ConfirmBox = require("ui/widget/confirmbox")
     UIManager:show(ConfirmBox:new{
-        text = _("KOReader's startup script has been updated. You'll need to completely exit KOReader to finalize the update."),
+        text = _("Bookwise's startup script has been updated. You'll need to completely exit Bookwise to finalize the update."),
         cancel_text = _("Ignore"),
         ok_text = _("Quit"),
         ok_callback = function()
@@ -250,9 +251,13 @@ elseif directory then
     FileManager:showFiles(directory)
     exit_code = UIManager:run()
 else
-    -- Get which file to start with
+    -- Bookwise is always the default startup unless explicitly overridden
     local last_file = G_reader_settings:readSetting("lastfile")
-    local start_with = G_reader_settings:readSetting("start_with") or "filemanager"
+    local start_with = G_reader_settings:readSetting("start_with")
+    -- Force bookwise as default for any unset or legacy values
+    if not start_with or start_with == "filemanager" or start_with == "history" then
+        start_with = "bookwise"
+    end
 
     local QuickStart = require("ui/quickstart")
     if not QuickStart:isShown() then
@@ -283,6 +288,89 @@ else
         local ReaderUI = require("apps/reader/readerui")
         -- Instantiate RD
         ReaderUI:showReader(last_file)
+        exit_code = UIManager:run()
+    elseif start_with == "bookwise" then
+        -- Bookwise library as default home screen
+        local DataStorage = require("datastorage")
+        local LuaSettings = require("luasettings")
+        local BookwiseLibrary = require("bookwise/bookwiselibrary")
+        local BookwiseApi = require("bookwise/bookwiseapi")
+        local NetworkMgr = require("ui/network/manager")
+        local MultiInputDialog = require("ui/widget/multiinputdialog")
+        local InfoMessage = require("ui/widget/infomessage")
+
+        local bw_settings_file = DataStorage:getSettingsDir() .. "/bookwise.lua"
+        local bw_settings = LuaSettings:open(bw_settings_file)
+        local session_id = bw_settings:readSetting("session_id")
+
+        if session_id then
+            -- Already logged in — show library
+            BookwiseLibrary.showLibrary(nil, bw_settings, function()
+                -- On failure, fall back to file manager
+                local FileManager = require("apps/filemanager/filemanager")
+                local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
+                FileManager:showFiles(home_dir)
+            end)
+        else
+            -- Not logged in — show login prompt
+            local login_dialog
+            login_dialog = MultiInputDialog:new{
+                title = _("Welcome to Bookwise"),
+                fields = {
+                    { text = "", hint = _("Email") },
+                    { text = "", hint = _("Password"), text_type = "password" },
+                },
+                buttons = {
+                    {
+                        {
+                            text = _("Skip"),
+                            id = "close",
+                            callback = function()
+                                UIManager:close(login_dialog)
+                                -- Fall through to file manager
+                                local FileManager = require("apps/filemanager/filemanager")
+                                local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
+                                FileManager:showFiles(home_dir)
+                            end,
+                        },
+                        {
+                            text = _("Login"),
+                            is_enter_default = true,
+                            callback = function()
+                                local fields = login_dialog:getFields()
+                                UIManager:close(login_dialog)
+                                UIManager:show(InfoMessage:new{ text = _("Logging in..."), timeout = 1 })
+
+                                NetworkMgr:runWhenOnline(function()
+                                    local api = BookwiseApi:new{
+                                        server_url = bw_settings:readSetting("server_url", "https://readwise.io"),
+                                    }
+                                    api:login(fields[1], fields[2], function(ok, result)
+                                        if ok then
+                                            api.session_id = result.sessionid
+                                            bw_settings:saveSetting("session_id", result.sessionid)
+                                            bw_settings:flush()
+                                            BookwiseLibrary.showLibrary(api, bw_settings)
+                                        else
+                                            UIManager:show(InfoMessage:new{
+                                                text = _("Login failed: ") .. tostring(result),
+                                                timeout = 3,
+                                            })
+                                            -- Fall back to file manager
+                                            local FileManager = require("apps/filemanager/filemanager")
+                                            local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
+                                            FileManager:showFiles(home_dir)
+                                        end
+                                    end)
+                                end)
+                            end,
+                        },
+                    },
+                },
+            }
+            UIManager:show(login_dialog)
+            login_dialog:onShowKeyboard()
+        end
         exit_code = UIManager:run()
     else
         local FileManager = require("apps/filemanager/filemanager")

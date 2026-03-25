@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# KUAL KOReader actions helper script
+# KUAL Bookwise actions helper script
 #
 ##
 
@@ -54,11 +54,11 @@ update_koreader() {
 
     if [ "${found_koreader_package}" = "false" ]; then
         # Go away
-        logmsg "No KOReader package found"
+        logmsg "No Bookwise package found"
     else
         # Do we want to do a clean install?
         if [ "${do_clean_install}" = "true" ]; then
-            logmsg "Removing current KOReader directory . . ."
+            logmsg "Removing current Bookwise directory . . ."
             rm -rf /mnt/us/koreader
             logmsg "Uninstall finished."
         fi
@@ -69,7 +69,7 @@ update_koreader() {
         # Strip the date purely because of screen space constraints
         koreader_pkg_ver="${koreader_pkg_ver%_*}"
         # Install it!
-        logmsg "Updating to KOReader ${koreader_pkg_ver} . . ."
+        logmsg "Updating to Bookwise ${koreader_pkg_ver} . . ."
         if [ "${koreader_pkg_type}" = "tgz" ]; then
             tar -C "/mnt/us" -xzf "${found_koreader_package}"
             fail=$?

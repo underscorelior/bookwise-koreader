@@ -45,7 +45,7 @@ local Screen = Device.screen
 local T = ffiUtil.template
 
 local FileManager = InputContainer:extend{
-    title = _("KOReader"),
+    title = _("Bookwise"),
     active_widgets = nil, -- array
     root_path = lfs.currentdir(),
 
@@ -453,7 +453,7 @@ function FileChooser:onBack()
             return true
         elseif back_to_exit == "prompt" then
             UIManager:show(ConfirmBox:new{
-                text = _("Exit KOReader?"),
+                text = _("Exit Bookwise?"),
                 ok_text = _("Exit"),
                 ok_callback = function()
                     self:onClose()

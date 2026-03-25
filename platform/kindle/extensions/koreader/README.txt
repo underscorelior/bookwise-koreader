@@ -1,10 +1,8 @@
-TITLE: KOReader
+TITLE: Bookwise
 
 CONTAINS: KUAL files for installation in /mnt/us/extensions/
 
-REF: Main KUAL thread http://www.mobileread.com/forums/showthread.php?t=203326
-
-UPSTREAM SOURCE: https://github.com/koreader/koreader
+UPSTREAM SOURCE: https://github.com/underscorelior/bookwise-koreader
 
 SUPPORTS:
 DX Yes
@@ -24,10 +22,6 @@ KT4 Yes
 
 REQUIRES: koreader
 
-ARCHIVAL LINK:
+ORIGINAL AUTHOR: Readwise (based on KOReader)
 
-ORIGINAL AUTHOR: KOReader development team
-
-NOTES: this is the successor of KindlePDFviewer for devices with touch input
-support. Support for keyboard input is to be done, use the legacy
-KindlePDFviewer or Librerator for this. Report issues and bugs on github.
+NOTES: Bookwise reading app for Kindle, powered by KOReader.

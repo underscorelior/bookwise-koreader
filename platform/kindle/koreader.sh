@@ -124,9 +124,9 @@ ko_update_check() {
     NEWUPDATE="${KOREADER_DIR}/ota/koreader.updated.tar"
     INSTALLED="${KOREADER_DIR}/ota/koreader.installed.tar"
     if [ -f "${NEWUPDATE}" ]; then
-        logmsg "Updating KOReader . . ."
+        logmsg "Updating Bookwise . . ."
         # Let our checkpoint script handle the detailed visual feedback...
-        eips_print_bottom_centered "Updating KOReader" 3
+        eips_print_bottom_centered "Updating Bookwise" 3
         # Keep a copy of the old manifest for cleaning leftovers later.
         cp "${KOREADER_DIR}/ota/package.index" /tmp/
         # Setup the FBInk daemon
@@ -156,7 +156,7 @@ ko_update_check() {
             (cd "${UNPACK_DIR}" && grep -xvFf "${KOREADER_DIR}/ota/package.index" /tmp/package.index | xargs -r rm -vf)
             logmsg "Update successful :)"
             eips_print_bottom_centered "Update successful :)" 2
-            eips_print_bottom_centered "KOReader will start momentarily . . ." 1
+            eips_print_bottom_centered "Bookwise will start momentarily . . ." 1
             # NOTE: Because, yep, that'll probably happen, as there's a high probability sh will throw a bogus syntax error,
             #       probably for the same fuse-related reasons as tar...
             # NOTE: Even if it doesn't necessarily leave the device in an unusable state,
@@ -166,7 +166,7 @@ ko_update_check() {
             # Huh ho...
             logmsg "Update failed :( (${fail})"
             eips_print_bottom_centered "Update failed :(" 2
-            eips_print_bottom_centered "KOReader may fail to function properly" 1
+            eips_print_bottom_centered "Bookwise may fail to function properly" 1
         fi
         rm -f /tmp/package.index "${NEWUPDATE}" # always purge newupdate to prevent update loops
         unset CPOINTS FBINK_NAMED_PIPE
@@ -311,10 +311,10 @@ if [ -e "/etc/init.d/volumd" ] || [ -e "/etc/upstart/volumd.conf" ]; then
 fi
 
 # finally call reader
-logmsg "Starting KOReader . . ."
+logmsg "Starting Bookwise . . ."
 # That's not necessary when using KPVBooklet ;).
 if [ "${FROM_KUAL}" = "yes" ]; then
-    eips_print_bottom_centered "Starting KOReader . . ." 1
+    eips_print_bottom_centered "Starting Bookwise . . ." 1
 fi
 
 # we keep at most 500KB worth of crash log
@@ -325,7 +325,7 @@ fi
 
 RETURN_VALUE=85
 while [ "${RETURN_VALUE}" -eq 85 ]; do
-    # Do an update check now, so we can actually update KOReader via the "Restart KOReader" menu entry ;).
+    # Do an update check now, so we can actually update Bookwise via the "Restart Bookwise" menu entry ;).
     ko_update_check
 
     ./reader.lua "$@" >>crash.log 2>&1

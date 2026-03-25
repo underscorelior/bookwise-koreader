@@ -437,6 +437,15 @@ function ReaderUI:init()
         ui = self,
     })
 
+    -- Bookwise reading sync (position restore, XP tracking, progress sync)
+    local BookwiseSync = require("bookwise/bookwisesync")
+    self:registerModule("bookwise_sync", BookwiseSync:new{
+        dialog = self.dialog,
+        view = self.view,
+        ui = self,
+        document = self.document,
+    })
+
     -- koreader plugins
     for _, plugin_module in ipairs(PluginLoader:loadPlugins()) do
         local ok, plugin_or_err = PluginLoader:createPluginInstance(

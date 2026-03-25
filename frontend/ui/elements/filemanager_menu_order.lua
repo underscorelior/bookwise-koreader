@@ -119,6 +119,7 @@ local order = {
         "menu_activate",
     },
     tools = {
+        "bookwise_library",
         "read_timer",
         "calibre",
         "exporter",

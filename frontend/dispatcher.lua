@@ -81,10 +81,10 @@ local settingsList = {
     exit_screensaver = {category="none", event="ExitScreensaver", title=_("Exit sleep screen"), device=true, condition=Device:isTouchDevice()},
     start_usbms = {category="none", event="RequestUSBMS", title=_("Start USB storage"), device=true, condition=Device:canToggleMassStorage()},
     suspend = {category="none", event="RequestSuspend", title=_("Sleep"), device=true, condition=Device:canSuspend()},
-    restart = {category="none", event="Restart", title=_("Restart KOReader"), device=true, condition=Device:canRestart()},
+    restart = {category="none", event="Restart", title=_("Restart Bookwise"), device=true, condition=Device:canRestart()},
     reboot = {category="none", event="RequestReboot", title=_("Reboot the device"), device=true, condition=Device:canReboot()},
     poweroff = {category="none", event="RequestPowerOff", title=_("Power off"), device=true, condition=Device:canPowerOff()},
-    exit = {category="none", event="Exit", title=_("Exit KOReader"), device=true, separator=true},
+    exit = {category="none", event="Exit", title=_("Exit Bookwise"), device=true, separator=true},
     ----
     toggle_hold_corners = {category="none", event="IgnoreHoldCorners", title=_("Toggle long-press on corners"), device=true, condition=Device:isTouchDevice()},
     ignore_hold_corners = {category="absolutenumber", event="IgnoreHoldCornersTime", default=10, min=5, max=30, unit=C_("Time", "s"), title=_("Ignore long-press on corners"), device=true, separator=true, condition=Device:isTouchDevice()},
