@@ -226,6 +226,8 @@ local order = {
     },
     filemanager = {},
     main = {
+        "bookwise_library",
+        "----------------------------",
         "history",
         "open_previous_document",
         "----------------------------",

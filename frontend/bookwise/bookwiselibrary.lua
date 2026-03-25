@@ -75,7 +75,7 @@ function BookwiseLibrary.showLibrary(api, settings, on_cancel)
                     settings = settings,
                     download_dir = download_dir,
                 }
-                UIManager:show(lib)
+                UIManager:show(lib, "full")
             else
                 UIManager:show(InfoMessage:new{
                     text = _("Failed to load library: ") .. tostring(books),
@@ -322,7 +322,7 @@ end
 
 function BookwiseLibrary:_rebuild()
     self:_buildUI()
-    UIManager:setDirty(self, "ui")
+    UIManager:setDirty(self, "full")
 end
 
 function BookwiseLibrary:_onSelectBook(book)
