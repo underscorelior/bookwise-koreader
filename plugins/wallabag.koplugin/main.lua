@@ -1456,7 +1456,7 @@ Enter the details of your Wallabag server and account.
 Client ID and client secret are long strings so you might prefer to save the empty settings and edit the config file directly in your installation folder:
 %1/wallabag.lua
 
-Restart KOReader after editing the config file.]]), BD.dirpath(DataStorage:getSettingsDir()))
+Restart Bookwise after editing the config file.]]), BD.dirpath(DataStorage:getSettingsDir()))
 
     self.settings_dialog = MultiInputDialog:new{
         title = _("Wallabag settings"),

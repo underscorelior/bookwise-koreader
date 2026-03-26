@@ -30,7 +30,7 @@ function BookwiseApi:_request(method, path, body, callback)
         })
     end
 
-    local request_body = nil
+    local request_body
     local headers = {
         ["Content-Type"] = "application/json",
         ["Accept"] = "application/json",
@@ -50,7 +50,7 @@ function BookwiseApi:_request(method, path, body, callback)
         url = url,
         method = method,
         headers = headers,
-        sink = ltn12.sink.table(response_body),
+        sink = socketutil.table_sink(response_body),
     }
 
     if request_body then
@@ -165,7 +165,7 @@ function BookwiseApi:downloadFile(url, dest_path, callback)
             headers = {
                 ["MOBILESESSION"] = self.session_id or "",
             },
-            sink = ltn12.sink.file(file),
+            sink = socketutil.file_sink(file),
         }
         if code ~= 200 then
             error("HTTP " .. tostring(code))
@@ -187,21 +187,6 @@ function BookwiseApi:getRawContent(parsed_doc_id, dest_path, callback)
     self:downloadFile(url, dest_path, callback)
 end
 
-function BookwiseApi:updateProgress(tracked_book_id, progress, assumed_updated, callback)
-    self:_request("POST", "/bookwise/api/tracked_books/push/", {
-        {
-            newDocumentState = {
-                id = tracked_book_id,
-                progress = progress,
-                status = "currently_reading",
-            },
-            assumedMasterState = {
-                updated = assumed_updated,
-            },
-        },
-    }, callback)
-end
-
 local DEVICE_ENV = {
     agent = { category = "bookwise-koreader", version = "1.0" },
     device = { type = "E-Reader", model = "Kindle Paperwhite", vendor = "Amazon" },
@@ -215,8 +200,7 @@ end
 function BookwiseApi:getExperience(callback)
     self:_request("GET", "/reader/api/state/", nil, function(ok, result)
         if ok and result then
-            local xp = result.experience or 0
-            callback(true, xp)
+            callback(true, result.experience or 0)
         else
             callback(false, result)
         end
@@ -226,8 +210,6 @@ end
 function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scroll_depth, xp_total, xp_previous, callback)
     local timestamp = math.floor(os.time() * 1000)
     local pos_event_id = make_event_id(timestamp)
-    local xp_event_id = make_event_id(timestamp + 1)
-
     local doc_path = "/documents/" .. document_id .. "/readingPosition/scrollDepth"
 
     local pos_reverse_patch = {}
@@ -257,6 +239,7 @@ function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scr
     }
 
     if xp_total and xp_previous then
+        local xp_event_id = make_event_id(timestamp + 1)
         table.insert(events, {
             correlationId = "0." .. xp_event_id,
             dataUpdates = {

@@ -8,22 +8,19 @@ Registered as a ReaderUI module — becomes a no-op for non-Bookwise books.
 ]]
 
 local Blitbuffer = require("ffi/blitbuffer")
-local CenterContainer = require("ui/widget/container/centercontainer")
+local BottomContainer = require("ui/widget/container/bottomcontainer")
 local DataStorage = require("datastorage")
 local Device = require("device")
 local Event = require("ui/event")
 local Font = require("ui/font")
 local FrameContainer = require("ui/widget/container/framecontainer")
-local Geom = require("ui/geometry")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local LuaSettings = require("luasettings")
 local NetworkMgr = require("ui/network/manager")
 local Notification = require("ui/widget/notification")
-local RectSpan = require("ui/widget/rectspan")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
-local VerticalGroup = require("ui/widget/verticalgroup")
 local logger = require("logger")
 local _ = require("gettext")
 
@@ -34,24 +31,23 @@ local BookwiseSync = InputContainer:extend{
     name = "bookwise_sync",
     ui = nil,
     document = nil,
-    -- Internal state
     _active = false,
     _api = nil,
     _settings = nil,
-    _book_info = nil,
     _tracked_book_id = nil,
     _document_id = nil,
     _word_count = 0,
     _last_synced_progress = -1,
-    _previous_scroll_depth = nil,
+    _previous_scroll_depth = nil,    -- server's last known position, for reversePatch
     _xp_total = nil,
     _xp_at_last_sync = nil,
     _session_xp = 0,
+    _max_progress_reached = 0,       -- highest scroll depth seen (anti-gaming)
     _last_page_progress = nil,
-    _max_progress_reached = 0,  -- highest progress seen, for anti-gaming
     _restored = false,
-    _sync_timer = nil,
-    _pending_sync = false,  -- true if we have unsynced data
+    _periodic_sync_func = nil,       -- function ref for timer cleanup
+    _pending_sync = false,
+    _xp_notif = nil,
 }
 
 function BookwiseSync:init()
@@ -61,10 +57,10 @@ function BookwiseSync:init()
     local session_id = self._settings:readSetting("session_id")
     if not session_id then return end
 
-    -- Check if current document is a Bookwise book
     local doc_path = self.ui.document and self.ui.document.file
     if not doc_path then return end
 
+    -- Look up book metadata (try absolute path, then relative)
     local book_info = self._settings:readSetting("book_map_" .. doc_path)
     if not book_info then
         local rel_path = doc_path:match(".-(bookwise%-books/.+)$")
@@ -74,9 +70,7 @@ function BookwiseSync:init()
     end
     if not book_info then return end
 
-    -- This is a Bookwise book — activate sync
     self._active = true
-    self._book_info = book_info
     self._tracked_book_id = book_info.tracked_book_id
     self._document_id = book_info.document_id
     self._word_count = book_info.word_count or 0
@@ -88,55 +82,77 @@ function BookwiseSync:init()
     }
 
     logger.info("BookwiseSync: active for", doc_path, "tracked_id=", self._tracked_book_id)
+
+    if self.ui.menu and self.ui.menu.registerToMainMenu then
+        self.ui.menu:registerToMainMenu(self)
+    end
 end
 
--- Show a small notification at the bottom of the screen (doesn't cover reading text)
 function BookwiseSync:_showBottomNotification(text, timeout)
     timeout = timeout or 2
-    local face = Font:getFace("x_smallinfofont")
-    local margin = Size.margin.default
-    local padding = Size.padding.default
-
-    local text_w = TextWidget:new{ text = text, face = face }
+    local text_w = TextWidget:new{
+        text = text,
+        face = Font:getFace("x_smallinfofont"),
+    }
     local frame = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
+        bordersize = Size.border.default,
         radius = 0,
-        margin = margin,
-        padding = padding,
-        CenterContainer:new{
-            dimen = Geom:new{ w = text_w:getSize().w, h = text_w:getSize().h },
-            text_w,
-        },
+        margin = Size.margin.default,
+        padding = Size.padding.default,
+        text_w,
     }
-    local notif_h = frame:getSize().h
-
-    local widget = InputContainer:extend{}
-    local instance = widget:new{
+    local bottom = BottomContainer:new{
         dimen = Screen:getSize(),
-        toast = true,
-    }
-    instance[1] = VerticalGroup:new{
-        align = "center",
-        RectSpan:new{
-            width = Screen:getWidth(),
-            height = Screen:getHeight() - notif_h - margin,
-        },
         frame,
     }
 
-    function instance:getSize()
-        return self.dimen
-    end
-    function instance:paintTo(bb, x, y)
-        if self[1] and self[1].paintTo then
-            self[1]:paintTo(bb, x, y)
-        end
+    if self._xp_notif then
+        UIManager:close(self._xp_notif)
     end
 
-    UIManager:show(instance, "ui")
+    self._xp_notif = bottom
+    UIManager:show(bottom, "ui")
     UIManager:scheduleIn(timeout, function()
-        UIManager:close(instance)
+        if self._xp_notif == bottom then
+            UIManager:close(bottom, "ui")
+            self._xp_notif = nil
+        end
     end)
+end
+
+-- Scroll depth (0-1) matching the Bookwise phone app.
+-- EPUBs: content position / full height. PDFs: page / total pages.
+function BookwiseSync:_getScrollDepth()
+    if not self.ui.document then return nil end
+    if self.ui.rolling then
+        local doc_height = self.ui.document.info and self.ui.document.info.doc_height
+        if doc_height and doc_height > 0 then
+            local pos = self.ui.document:getCurrentPos()
+            if pos then
+                return math.min(1.0, math.max(0, pos / doc_height))
+            end
+        end
+    end
+    local current = self.ui.document:getCurrentPage()
+    local total = self.ui.document:getPageCount()
+    if current and total and total > 0 then
+        return current / total
+    end
+    return nil
+end
+
+function BookwiseSync:_gotoScrollDepth(target)
+    if not self.ui.document then return end
+    if self.ui.rolling then
+        self.ui:handleEvent(Event:new("GotoPercent", target * 100))
+    else
+        local total = self.ui.document:getPageCount()
+        if total and total > 0 then
+            local page = math.max(1, math.min(total, math.floor(target * total + 0.5)))
+            self.ui:handleEvent(Event:new("GotoPage", page))
+        end
+    end
 end
 
 function BookwiseSync:onReaderReady()
@@ -149,7 +165,6 @@ function BookwiseSync:_fetchAndRestore()
     if not self._api.session_id then return end
 
     NetworkMgr:runWhenOnline(function()
-        -- Fetch XP
         self._api:getExperience(function(ok, xp)
             if ok then
                 self._xp_total = math.floor(xp)
@@ -158,7 +173,6 @@ function BookwiseSync:_fetchAndRestore()
             end
         end)
 
-        -- Fetch library for position restore
         self._api:getLibrary(function(ok, books)
             if not ok then return end
             for _i, book in ipairs(books) do
@@ -166,7 +180,6 @@ function BookwiseSync:_fetchAndRestore()
                     local target_progress = book.progress or 0
                     logger.info("BookwiseSync: server progress=", target_progress)
                     self._previous_scroll_depth = target_progress
-                    self._last_page_progress = target_progress
                     self._max_progress_reached = target_progress
 
                     if (not self._word_count or self._word_count == 0) and book.word_count then
@@ -180,7 +193,6 @@ function BookwiseSync:_fetchAndRestore()
                                 self._settings:flush()
                             end
                         end
-                        logger.info("BookwiseSync: updated word_count=", self._word_count)
                     end
 
                     if target_progress > 0.01 then
@@ -199,20 +211,22 @@ function BookwiseSync:_restorePosition(target_progress)
         UIManager:scheduleIn(delay, function()
             if self._restored then return end
             if not self.ui.document then return end
-            local total = self.ui.document:getPageCount()
-            if not total or total <= 0 then return end
-            local target_page = math.max(1, math.min(total, math.floor(target_progress * total + 0.5)))
-            local current = self.ui.document:getCurrentPage()
-            if current then
+            local current_depth = self:_getScrollDepth()
+            if current_depth then
                 self._restored = true
-                if math.abs(current - target_page) > 1 then
-                    logger.info("BookwiseSync: restoring to page", target_page, "/", total)
-                    self.ui:handleEvent(Event:new("GotoPage", target_page))
-                    UIManager:show(Notification:new{
-                        text = _("Bookwise: restored to ") .. string.format("%d%%", math.floor(target_progress * 100)),
-                        timeout = 3,
-                    })
+                if math.abs(current_depth - target_progress) > 0.01 then
+                    logger.info("BookwiseSync: restoring to", string.format("%.1f%%", target_progress * 100),
+                        "from", string.format("%.1f%%", current_depth * 100))
+                    self:_gotoScrollDepth(target_progress)
                 end
+                -- Sync max_progress from actual rendered position after restore
+                UIManager:scheduleIn(0.5, function()
+                    local actual = self:_getScrollDepth()
+                    if actual then
+                        self._max_progress_reached = actual
+                        self._last_page_progress = actual
+                    end
+                end)
             end
         end)
     end
@@ -223,11 +237,8 @@ function BookwiseSync:onPageUpdate()
     if not self.ui.document then return end
     if not self._document_id then return end
 
-    local current = self.ui.document:getCurrentPage()
-    local total = self.ui.document:getPageCount()
-    if not current or not total or total <= 0 then return end
-
-    local progress = current / total
+    local progress = self:_getScrollDepth()
+    if not progress then return end
 
     if not self._last_page_progress then
         self._last_page_progress = progress
@@ -235,9 +246,9 @@ function BookwiseSync:onPageUpdate()
         return
     end
 
-    -- Only award XP for NEW pages (beyond the furthest point reached)
-    -- Going back and re-reading pages does not give XP
-    if progress > self._max_progress_reached then
+    -- Only award XP for pages beyond the furthest point reached (no gaming by flipping back)
+    -- 0.001 tolerance for floating point after position restore
+    if progress > self._max_progress_reached + 0.001 then
         -- Count actual words on the current page
         local words_this_page = 0
         if self.view and self.view.getCurrentPageLineWordCounts then
@@ -255,7 +266,7 @@ function BookwiseSync:onPageUpdate()
                 self._xp_total = self._xp_total + words_this_page
             end
             self:_showBottomNotification(
-                string.format("+%d xp (%d this session)", words_this_page, self._session_xp), 2)
+                string.format("+%d xp (%d this session)", words_this_page, self._session_xp), 1.5)
         end
         self._max_progress_reached = progress
     end
@@ -269,17 +280,13 @@ function BookwiseSync:_doSync()
     if not self.ui.document then return end
     if not self._document_id then return end
 
-    local current = self.ui.document:getCurrentPage()
-    local total = self.ui.document:getPageCount()
-    if not current or not total or total <= 0 then return end
-
-    local progress = current / total
+    local progress = self:_getScrollDepth()
+    if not progress then return end
     if math.abs(progress - self._last_synced_progress) < 0.005 then return end
 
     self._last_synced_progress = progress
 
-    local xp_previous_for_event = self._xp_at_last_sync
-    local xp_total_for_event = nil
+    local xp_total_for_event
     if self._xp_total and self._xp_total > (self._xp_at_last_sync or 0) then
         xp_total_for_event = self._xp_total
     end
@@ -287,10 +294,9 @@ function BookwiseSync:_doSync()
     logger.info("BookwiseSync: syncing", string.format("%.4f", progress),
         "total_xp=" .. (self._xp_total or 0), "session=" .. self._session_xp)
 
-    -- Try to sync; if offline, queue for later
     if NetworkMgr:isOnline() then
         self._api:syncReadingProgress(self._document_id, progress, self._previous_scroll_depth,
-            xp_total_for_event, xp_previous_for_event,
+            xp_total_for_event, self._xp_at_last_sync,
             function(ok, result)
                 if ok then
                     logger.info("BookwiseSync: sync succeeded")
@@ -303,7 +309,6 @@ function BookwiseSync:_doSync()
                 end
             end)
     else
-        logger.info("BookwiseSync: offline, will sync when back online")
         self._pending_sync = true
     end
 end
@@ -312,25 +317,24 @@ function BookwiseSync:_startPeriodicSync()
     local function periodicSync()
         if not self._active then return end
         if not self.ui.document then return end
-
-        -- If we have pending data and are now online, sync
         if self._pending_sync then
             self:_doSync()
         end
-
-        self._sync_timer = UIManager:scheduleIn(30, periodicSync)
+        UIManager:scheduleIn(30, periodicSync)
     end
-    self._sync_timer = UIManager:scheduleIn(15, periodicSync)
+    self._periodic_sync_func = periodicSync
+    UIManager:scheduleIn(15, periodicSync)
 end
 
 function BookwiseSync:onCloseDocument()
     if not self._active then return end
     logger.info("BookwiseSync: final sync on close")
 
-    -- Try immediate sync
+    self._active = false -- prevent periodic timer from re-firing
+
     self:_doSync()
 
-    -- If still pending (offline), schedule a retry when online
+    -- If still offline, retry when connectivity returns
     if self._pending_sync then
         local api = self._api
         local document_id = self._document_id
@@ -340,22 +344,19 @@ function BookwiseSync:onCloseDocument()
         local xp_prev = self._xp_at_last_sync
         NetworkMgr:runWhenOnline(function()
             api:syncReadingProgress(document_id, progress, prev, xp_total, xp_prev,
-                function(ok, result)
+                function(ok)
                     if ok then
                         logger.info("BookwiseSync: deferred sync succeeded")
-                    else
-                        logger.warn("BookwiseSync: deferred sync failed:", result)
                     end
                 end)
         end)
     end
 
-    if self._sync_timer then
-        UIManager:unschedule(self._sync_timer)
+    if self._periodic_sync_func then
+        UIManager:unschedule(self._periodic_sync_func)
     end
 end
 
--- Menu integration: "Bookwise Library" in reader menu
 function BookwiseSync:addToMainMenu(menu_items)
     if not self._active then return end
     menu_items.bookwise_library = {

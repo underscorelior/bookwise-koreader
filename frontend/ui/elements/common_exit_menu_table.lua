@@ -19,7 +19,7 @@ exit_settings.exit = {
     end,
 }
 exit_settings.restart_koreader = {
-    text = _("Restart KOReader"),
+    text = _("Restart Bookwise"),
     callback = function()
         UIManager:broadcastEvent(Event:new("Restart"))
     end,
