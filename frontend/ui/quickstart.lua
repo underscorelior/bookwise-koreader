@@ -52,7 +52,7 @@ local quickstart_guide = {}
 if Device:hasScreenKB() or Device:hasSymKey() then
     -- On Non-Touch kindle, not showing "Frontlight", showing specific section "Shortcuts"
     table.insert(quickstart_guide, _([[
-<div class="logo">![Bookwise](resources/koreader.svg)</div>
+<div class="logo">![Bookwise](resources/bookwise.svg)</div>
 
 # Quickstart guide
 
@@ -71,7 +71,7 @@ You can access the complete user manual from [our GitHub page](https://github.co
     ) --insert toc
 else
     table.insert(quickstart_guide, _([[
-<div class="logo">![Bookwise](resources/koreader.svg)</div>
+<div class="logo">![Bookwise](resources/bookwise.svg)</div>
 
 # Quickstart guide
 

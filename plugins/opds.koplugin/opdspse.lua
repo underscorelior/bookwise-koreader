@@ -105,7 +105,7 @@ function OPDSPSE:streamPages(remote_url, count, continue, username, password, la
     local page_table = {image_disposable = true}
     setmetatable(page_table, {__index = function (_, key)
         if type(key) ~= "number" then
-            local error_bb = RenderImage:renderImageFile("resources/koreader.png", false)
+            local error_bb = RenderImage:renderImageFile("resources/bookwise.png", false)
             return error_bb
         else
             local index = key - 1
@@ -138,12 +138,12 @@ function OPDSPSE:streamPages(remote_url, count, continue, username, password, la
             local data = table.concat(page_data)
             if code == 200 then
                 local page_bb = RenderImage:renderImageData(data, #data, false)
-                             or RenderImage:renderImageFile("resources/koreader.png", false)
+                             or RenderImage:renderImageFile("resources/bookwise.png", false)
                 return page_bb
             else
                 logger.dbg("OPDSBrowser:streamPages: Request failed:", status or code)
                 logger.dbg("OPDSBrowser:streamPages: Response headers:", headers)
-                local error_bb = RenderImage:renderImageFile("resources/koreader.png", false)
+                local error_bb = RenderImage:renderImageFile("resources/bookwise.png", false)
                 return error_bb
             end
         end

@@ -187,11 +187,18 @@ function BookwiseApi:getRawContent(parsed_doc_id, dest_path, callback)
     self:downloadFile(url, dest_path, callback)
 end
 
-local DEVICE_ENV = {
-    agent = { category = "bookwise-koreader", version = "1.0" },
-    device = { type = "E-Reader", model = "Kindle Paperwhite", vendor = "Amazon" },
-    channel = "koreader",
-}
+local function get_device_env()
+    local Device = require("device")
+    return {
+        agent = { category = "bookwise-koreader", version = "1.0" },
+        device = {
+            type = "E-Reader",
+            model = Device.model or "Kindle",
+            vendor = Device.firmware_rev and "Amazon" or "Unknown",
+        },
+        channel = "bookwise-kindle",
+    }
+end
 
 local function make_event_id(timestamp)
     return string.format("%014d%012x", timestamp, math.random(0, 0xffffffffffff))
@@ -234,7 +241,7 @@ function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scr
             id = pos_event_id,
             name = "reading-position-updated",
             timestamp = timestamp,
-            environment = DEVICE_ENV,
+            environment = get_device_env(),
         },
     }
 
@@ -255,7 +262,7 @@ function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scr
             name = "add-experience-points",
             timestamp = timestamp + 1,
             userInteraction = "null",
-            environment = DEVICE_ENV,
+            environment = get_device_env(),
         })
     end
 

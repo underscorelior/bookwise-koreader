@@ -312,8 +312,10 @@ fi
 
 # finally call reader
 logmsg "Starting Bookwise . . ."
-# That's not necessary when using KPVBooklet ;).
-if [ "${FROM_KUAL}" = "yes" ]; then
+# Show Bookwise splash screen on launch
+if [ -f "${KOREADER_DIR}/resources/bookwise-splash.png" ]; then
+    /var/tmp/fbink -g file="${KOREADER_DIR}/resources/bookwise-splash.png" -q 2>/dev/null
+elif [ "${FROM_KUAL}" = "yes" ]; then
     eips_print_bottom_centered "Starting Bookwise . . ." 1
 fi
 

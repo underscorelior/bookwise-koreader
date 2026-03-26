@@ -4,7 +4,7 @@ ImageWidget shows an image from a file or memory.
 Show image from file example:
 
         UIManager:show(ImageWidget:new{
-            file = "resources/koreader.png",
+            file = "resources/bookwise.png",
             -- Make sure alpha is set to true if png has transparent background
             -- alpha = true,
         })

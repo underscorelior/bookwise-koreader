@@ -586,7 +586,7 @@ function HttpInspector:onRequest(data, request_id)
         -- No security/sanity check for now
         local filepath = DataStorage:getDataDir() .. "/web" .. uri
         if uri == "/favicon.ico" then -- hijack this one to return our icon
-            filepath = "resources/koreader.png"
+            filepath = "resources/bookwise.png"
         end
         local f = io.open(filepath, "rb")
         if f then

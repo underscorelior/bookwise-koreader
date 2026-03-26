@@ -158,7 +158,7 @@ Register a view UI widget module for document browsing.
 @usage
 local ImageWidget = require("ui/widget/imagewidget")
 local dummy_image = ImageWidget:new{
-    file = "resources/koreader.png",
+    file = "resources/bookwise.png",
 }
 -- the image will be painted on all book pages
 readerui.view:registerViewModule('dummy_image', dummy_image)

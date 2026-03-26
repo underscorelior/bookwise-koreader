@@ -30,8 +30,7 @@ if G_reader_settings:hasNot("screensaver_show_message") then
     G_reader_settings:makeFalse("screensaver_show_message")
 end
 if G_reader_settings:hasNot("screensaver_type") then
-    G_reader_settings:saveSetting("screensaver_type", "disable")
-    G_reader_settings:makeTrue("screensaver_show_message")
+    G_reader_settings:saveSetting("screensaver_type", "random_image")
 end
 if G_reader_settings:hasNot("screensaver_img_background") then
     G_reader_settings:saveSetting("screensaver_img_background", "black")
@@ -436,7 +435,7 @@ function Screensaver:setup(event, event_message)
     if self.screensaver_type == "random_image" then
         local screensaver_dir = G_reader_settings:readSetting(self.prefix .. "screensaver_dir")
                              or G_reader_settings:readSetting("screensaver_dir")
-        self.image_file = _getRandomImage(screensaver_dir) or "resources/koreader.png" -- Fallback image
+        self.image_file = _getRandomImage(screensaver_dir) or "resources/bookwise-splash.png" -- Fallback image
     end
 
     -- Use the right background setting depending on the effective mode, now that fallbacks have kicked in.

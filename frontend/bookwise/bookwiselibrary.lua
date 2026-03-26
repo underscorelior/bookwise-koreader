@@ -1,7 +1,7 @@
 --[[--
 Bookwise Library screen.
 
-Shows the user's Bookwise library as a full-screen list with book titles,
+Shows the user's Bookwise library as a detailed list with book titles,
 authors, status, and progress. Handles download and opening.
 ]]
 
@@ -18,6 +18,7 @@ local lfs = require("libs/libkoreader-lfs")
 local _ = require("gettext")
 
 local BookwiseApi = require("bookwise/bookwiseapi")
+local json = require("dkjson")
 
 local Screen = Device.screen
 
@@ -28,6 +29,39 @@ local BookwiseLibrary = InputContainer:extend{
     settings = nil,
     download_dir = nil,
 }
+
+local LIBRARY_CACHE_FILE = DataStorage:getDataDir() .. "/bookwise-library-cache.json"
+
+local function _cacheLibrary(books)
+    local file = io.open(LIBRARY_CACHE_FILE, "w")
+    if file then
+        file:write(json.encode(books))
+        file:close()
+    end
+end
+
+local function _loadCachedLibrary()
+    local file = io.open(LIBRARY_CACHE_FILE, "r")
+    if file then
+        local content = file:read("*a")
+        file:close()
+        local books = json.decode(content)
+        if books and type(books) == "table" then
+            return books
+        end
+    end
+    return nil
+end
+
+local function _showLibraryWidget(books, api, settings, download_dir)
+    local lib = BookwiseLibrary:new{
+        books = books,
+        api = api,
+        settings = settings,
+        download_dir = download_dir,
+    }
+    UIManager:show(lib)
+end
 
 function BookwiseLibrary.showLibrary(api, settings, on_cancel)
     local settings_file = DataStorage:getSettingsDir() .. "/bookwise.lua"
@@ -40,27 +74,56 @@ function BookwiseLibrary.showLibrary(api, settings, on_cancel)
     local download_dir = DataStorage:getDataDir() .. "/bookwise-books"
     lfs.mkdir(download_dir)
 
-    UIManager:show(InfoMessage:new{ text = _("Loading library..."), timeout = 1 })
-
-    NetworkMgr:runWhenOnline(function()
+    if NetworkMgr:isOnline() then
+        UIManager:show(InfoMessage:new{ text = _("Loading library..."), timeout = 1 })
         api:getLibrary(function(ok, books)
             if ok then
-                local lib = BookwiseLibrary:new{
-                    books = books,
-                    api = api,
-                    settings = settings,
-                    download_dir = download_dir,
-                }
-                UIManager:show(lib)
+                _cacheLibrary(books)
+                _showLibraryWidget(books, api, settings, download_dir)
             else
-                UIManager:show(InfoMessage:new{
-                    text = _("Failed to load library: ") .. tostring(books),
-                    timeout = 3,
-                })
-                if on_cancel then on_cancel() end
+                local cached = _loadCachedLibrary()
+                if cached then
+                    _showLibraryWidget(cached, api, settings, download_dir)
+                else
+                    UIManager:show(InfoMessage:new{
+                        text = _("Failed to load library: ") .. tostring(books),
+                        timeout = 3,
+                    })
+                    if on_cancel then on_cancel() end
+                end
             end
         end)
-    end)
+    else
+        -- Offline: show cached library immediately, then refresh in background when online
+        local cached = _loadCachedLibrary()
+        if cached then
+            _showLibraryWidget(cached, api, settings, download_dir)
+            -- Schedule a background refresh when connectivity returns
+            NetworkMgr:runWhenOnline(function()
+                api:getLibrary(function(ok, books)
+                    if ok then
+                        _cacheLibrary(books)
+                    end
+                end)
+            end)
+        else
+            UIManager:show(InfoMessage:new{ text = _("Waiting for network..."), timeout = 1 })
+            NetworkMgr:runWhenOnline(function()
+                api:getLibrary(function(ok, books)
+                    if ok then
+                        _cacheLibrary(books)
+                        _showLibraryWidget(books, api, settings, download_dir)
+                    else
+                        UIManager:show(InfoMessage:new{
+                            text = _("Failed to load library: ") .. tostring(books),
+                            timeout = 3,
+                        })
+                        if on_cancel then on_cancel() end
+                    end
+                end)
+            end)
+        end
+    end
 end
 
 function BookwiseLibrary:init()
@@ -70,6 +133,7 @@ function BookwiseLibrary:init()
 
     self._menu = Menu:new{
         title = _("Bookwise"),
+        subtitle = _("Library"),
         item_table = item_table,
         show_parent = self,
         width = self.dimen.w,
@@ -100,27 +164,40 @@ function BookwiseLibrary:_buildItemTable()
         local title = book.title or "Untitled"
         local author = book.author or ""
 
-        local status_str = ""
+        -- Status prefix
+        local status_tag = ""
         if book.status == "currently_reading" then
-            status_str = "[Reading] "
+            status_tag = "Reading"
         elseif book.status == "finished" then
-            status_str = "[Done] "
+            status_tag = "Done"
         elseif book.status == "want_to_read" then
-            status_str = "[TBR] "
+            status_tag = "TBR"
         end
 
-        local progress_str = ""
+        -- Progress
+        local progress_pct = ""
         if book.progress and book.progress > 0 then
-            progress_str = string.format("  %d%%", math.floor(book.progress * 100))
+            progress_pct = string.format("%d%%", math.floor(book.progress * 100))
         end
 
+        -- Check if downloaded
         local local_path = self:_getLocalPath(book)
         local downloaded = local_path and lfs.attributes(local_path) ~= nil
-        local dl_indicator = downloaded and " *" or ""
+
+        -- Format: bold title on first line, author on second line
+        -- mandatory shows status + progress on the right
+        local right_text = status_tag
+        if progress_pct ~= "" then
+            right_text = right_text ~= "" and (status_tag .. "  " .. progress_pct) or progress_pct
+        end
+        if downloaded then
+            right_text = right_text .. "  *"
+        end
 
         table.insert(items, {
-            text = status_str .. title .. dl_indicator,
-            mandatory = author .. progress_str,
+            text = title .. "\n" .. author,
+            mandatory = right_text,
+            bold = (book.status == "currently_reading"),
             book = book,
             callback = function()
                 self:_onSelectBook(book)
