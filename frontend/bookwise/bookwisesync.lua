@@ -326,6 +326,104 @@ function BookwiseSync:_startPeriodicSync()
     UIManager:scheduleIn(15, periodicSync)
 end
 
+function BookwiseSync:onEndOfBook()
+    if not self._active then return end
+    if not self._tracked_book_id then return end
+
+    local ButtonDialog = require("ui/widget/buttondialog")
+    local InputDialog = require("ui/widget/inputdialog")
+
+    -- Build rating buttons: 1 to 5 stars
+    local rating_buttons = {}
+    for stars = 1, 5 do
+        local label = string.rep("*", stars) .. string.rep(" ", 5 - stars) .. " " .. stars
+        table.insert(rating_buttons, {
+            {
+                text = label,
+                callback = function()
+                    UIManager:close(self._review_dialog)
+                    self:_showReviewText(stars)
+                end,
+            },
+        })
+    end
+    table.insert(rating_buttons, {
+        {
+            text = _("Skip"),
+            callback = function()
+                UIManager:close(self._review_dialog)
+                -- Mark as finished without review
+                self._api:updateBookStatus(self._tracked_book_id, "finished", function() end)
+            end,
+        },
+    })
+
+    self._review_dialog = ButtonDialog:new{
+        title = _("You finished the book!"),
+        info_text = _("How would you rate it?"),
+        buttons = rating_buttons,
+    }
+    UIManager:show(self._review_dialog)
+end
+
+function BookwiseSync:_showReviewText(rating)
+    local input_dialog
+    input_dialog = InputDialog:new{
+        title = _("Write a review (optional)"),
+        input_hint = _("What did you think of this book?"),
+        input_type = "text",
+        buttons = {
+            {
+                {
+                    text = _("Skip"),
+                    callback = function()
+                        UIManager:close(input_dialog)
+                        self:_submitReview(rating, nil)
+                    end,
+                },
+                {
+                    text = _("Submit"),
+                    is_enter_default = true,
+                    callback = function()
+                        local review_text = input_dialog:getInputText()
+                        UIManager:close(input_dialog)
+                        if review_text == "" then review_text = nil end
+                        self:_submitReview(rating, review_text)
+                    end,
+                },
+            },
+        },
+    }
+    UIManager:show(input_dialog)
+    input_dialog:onShowKeyboard()
+end
+
+function BookwiseSync:_submitReview(rating, description)
+    UIManager:show(InfoMessage:new{ text = _("Submitting review..."), timeout = 1 })
+
+    -- Mark book as finished
+    self._api:updateBookStatus(self._tracked_book_id, "finished", function() end)
+
+    -- Submit review
+    NetworkMgr:runWhenOnline(function()
+        self._api:submitReview(self._tracked_book_id, rating, description,
+            function(ok, result)
+                if ok then
+                    UIManager:show(Notification:new{
+                        text = _("Review submitted!"),
+                        timeout = 2,
+                    })
+                else
+                    logger.warn("BookwiseSync: review failed:", result)
+                    UIManager:show(InfoMessage:new{
+                        text = _("Failed to submit review."),
+                        timeout = 2,
+                    })
+                end
+            end)
+    end)
+end
+
 function BookwiseSync:onCloseDocument()
     if not self._active then return end
     logger.info("BookwiseSync: final sync on close")

@@ -259,10 +259,13 @@ else
         start_with = "bookwise"
     end
 
-    local QuickStart = require("ui/quickstart")
-    if not QuickStart:isShown() then
-        start_with = "last"
-        last_file = QuickStart:getQuickStart()
+    -- Skip QuickStart for Bookwise — we have our own onboarding
+    if start_with ~= "bookwise" then
+        local QuickStart = require("ui/quickstart")
+        if not QuickStart:isShown() then
+            start_with = "last"
+            last_file = QuickStart:getQuickStart()
+        end
     end
 
     if start_with == "last" and last_file and lfs.attributes(last_file, "mode") ~= "file" then
@@ -291,10 +294,13 @@ else
         exit_code = UIManager:run()
     elseif start_with == "bookwise" then
         -- Bookwise library as default home screen
+        -- FileManager is always created first (provides gestures, menus, settings)
+        -- Library shows on top of it
+        local bw_ok, bw_err = pcall(function()
+
         local DataStorage = require("datastorage")
         local LuaSettings = require("luasettings")
         local BookwiseLibrary = require("bookwise/bookwiselibrary")
-        local BookwiseApi = require("bookwise/bookwiseapi")
         local NetworkMgr = require("ui/network/manager")
         local MultiInputDialog = require("ui/widget/multiinputdialog")
         local InfoMessage = require("ui/widget/infomessage")
@@ -304,13 +310,8 @@ else
         local session_id = bw_settings:readSetting("session_id")
 
         if session_id then
-            -- Already logged in — show library
-            BookwiseLibrary.showLibrary(nil, bw_settings, function()
-                -- On failure, fall back to file manager
-                local FileManager = require("apps/filemanager/filemanager")
-                local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
-                FileManager:showFiles(home_dir)
-            end)
+            -- Already logged in — show library (it creates FM underneath)
+            BookwiseLibrary.showLibrary(nil, bw_settings)
         else
             -- Not logged in — show login prompt
             local login_dialog
@@ -370,6 +371,15 @@ else
             }
             UIManager:show(login_dialog)
             login_dialog:onShowKeyboard()
+        end
+
+        end) -- end pcall
+        if not bw_ok then
+            io.write(" [!] Bookwise startup error: ", tostring(bw_err), "\n")
+            -- Fall back to file manager
+            local FileManager = require("apps/filemanager/filemanager")
+            local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
+            FileManager:showFiles(home_dir)
         end
         exit_code = UIManager:run()
     else

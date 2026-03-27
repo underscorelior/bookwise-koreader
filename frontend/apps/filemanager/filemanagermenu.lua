@@ -1140,10 +1140,7 @@ end
 
 function FileManagerMenu:onShowBookwiseLibrary()
     local BookwiseLibrary = require("bookwise/bookwiselibrary")
-    -- Close the file manager first
-    if self.ui and self.ui.onClose then
-        self.ui:onClose()
-    end
+    -- Show library on top of FM (FM stays underneath for gestures/menus)
     BookwiseLibrary.showLibrary()
     return true
 end

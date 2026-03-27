@@ -200,6 +200,29 @@ local function get_device_env()
     }
 end
 
+function BookwiseApi:submitReview(tracked_book_id, rating, description, callback)
+    self:_request("POST", "/bookwise/api/book_review/", {
+        tracked_book_id = tracked_book_id,
+        rating = rating,
+        user_description = description,
+        post_to_feed = true,
+    }, callback)
+end
+
+function BookwiseApi:updateBookStatus(tracked_book_id, status, callback)
+    self:_request("POST", "/bookwise/api/tracked_books/push/", {
+        {
+            newDocumentState = {
+                id = tracked_book_id,
+                status = status,
+            },
+            assumedMasterState = {
+                updated = "2020-01-01T00:00:00.000000+00:00",
+            },
+        },
+    }, callback)
+end
+
 local function make_event_id(timestamp)
     return string.format("%014d%012x", timestamp, math.random(0, 0xffffffffffff))
 end

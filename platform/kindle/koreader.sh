@@ -96,7 +96,9 @@ elif [ "${1}" = "--asap" ]; then
     # Don't sleep during eips calls either...
     export EIPS_NO_SLEEP="true"
 else
-    NO_SLEEP="no"
+    # Default to fast start for Bookwise
+    NO_SLEEP="yes"
+    export EIPS_NO_SLEEP="true"
 fi
 
 # If we were started by KUAL (either Kindlet or Booklet), we have a few more things to do...
@@ -313,9 +315,9 @@ fi
 # finally call reader
 logmsg "Starting Bookwise . . ."
 # Show Bookwise splash screen on launch
-if [ -f "${KOREADER_DIR}/resources/bookwise-splash.png" ]; then
-    /var/tmp/fbink -g file="${KOREADER_DIR}/resources/bookwise-splash.png" -q 2>/dev/null
-elif [ "${FROM_KUAL}" = "yes" ]; then
+if [ -f "${KOREADER_DIR}/resources/bookwise-splash-gray.png" ]; then
+    eips -g "${KOREADER_DIR}/resources/bookwise-splash-gray.png"
+else
     eips_print_bottom_centered "Starting Bookwise . . ." 1
 fi
 
