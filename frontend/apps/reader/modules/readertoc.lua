@@ -72,7 +72,7 @@ end
 function ReaderToc:getTitle()
     local title = _("Table of contents")
     -- Handmade ToC has precedence over alternative ToC
-    if self.ui.handmade:isHandmadeTocEnabled() then
+    if self.ui.handmade and self.ui.handmade:isHandmadeTocEnabled() then
         title = title .. " " .. self.ui.handmade.custom_toc_symbol
     elseif self.ui.document:isTocAlternativeToc() then
         title = title .. " " .. self.alt_toc_symbol
@@ -1214,13 +1214,13 @@ If the document contains no headings, or all are ignored, the alternative ToC wi
 
 Some of the headings can be ignored, and hints can be set to other non-heading elements in a user style tweak, so they can be used as ToC items.
 See Style tweaks → Miscellaneous → Alternative ToC hints.]])
-                if self.ui.handmade:isHandmadeTocEnabled() then
+                if self.ui.handmade and self.ui.handmade:isHandmadeTocEnabled() then
                     help_text = _([[To use the alternative ToC, disable your custom table of contents first.]]) .. "\n\n" .. help_text
                 end
                 return help_text
             end,
             enabled_func = function()
-                return not self.ui.handmade:isHandmadeTocEnabled()
+                return not (self.ui.handmade and self.ui.handmade:isHandmadeTocEnabled())
             end,
             checked_func = function()
                 return self.ui.document:isTocAlternativeToc()

@@ -7,7 +7,6 @@ local order = {
         "setting",
         "tools",
         "search",
-        "filemanager",
         "main",
     },
     navi = {

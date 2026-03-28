@@ -151,7 +151,7 @@ function BookwiseMenuItem:init()
         text = author,
         face = author_face,
         max_width = left_width,
-        fgcolor = Blitbuffer.COLOR_DARK_GRAY,
+        fgcolor = Blitbuffer.COLOR_BLACK,
     }
 
     local text_group = VerticalGroup:new{

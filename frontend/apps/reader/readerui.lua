@@ -15,7 +15,7 @@ local DocumentRegistry = require("document/documentregistry")
 local Event = require("ui/event")
 local FileManagerBookInfo = require("apps/filemanager/filemanagerbookinfo")
 local FileManagerCollection = require("apps/filemanager/filemanagercollection")
-local FileManagerHistory = require("apps/filemanager/filemanagerhistory")
+-- FileManagerHistory removed (Bookwise debloat)
 local FileManagerFileSearcher = require("apps/filemanager/filemanagerfilesearcher")
 local FileManagerShortcuts = require("apps/filemanager/filemanagershortcuts")
 local InfoMessage = require("ui/widget/infomessage")
@@ -36,7 +36,7 @@ local ReaderDeviceStatus = require("apps/reader/modules/readerdevicestatus")
 local ReaderDictionary = require("apps/reader/modules/readerdictionary")
 local ReaderFont = require("apps/reader/modules/readerfont")
 local ReaderGoto = require("apps/reader/modules/readergoto")
-local ReaderHandMade = require("apps/reader/modules/readerhandmade")
+-- ReaderHandMade removed (Bookwise debloat)
 local ReaderHinting = require("apps/reader/modules/readerhinting")
 local ReaderHighlight = require("apps/reader/modules/readerhighlight")
 local ReaderScrolling = require("apps/reader/modules/readerscrolling")
@@ -48,7 +48,7 @@ local ReaderPanning = require("apps/reader/modules/readerpanning")
 local ReaderPaging = require("apps/reader/modules/readerpaging")
 local ReaderRolling = require("apps/reader/modules/readerrolling")
 local ReaderSearch = require("apps/reader/modules/readersearch")
-local ReaderStatus = require("apps/reader/modules/readerstatus")
+-- ReaderStatus removed (Bookwise debloat)
 local ReaderStyleTweak = require("apps/reader/modules/readerstyletweak")
 local ReaderThumbnail = require("apps/reader/modules/readerthumbnail")
 local ReaderToc = require("apps/reader/modules/readertoc")
@@ -161,13 +161,7 @@ function ReaderUI:init()
         view = self.view,
         ui = self
     })
-    -- Handmade/custom ToC and hidden flows
-    self:registerModule("handmade", ReaderHandMade:new{
-        dialog = self.dialog,
-        view = self.view,
-        ui = self,
-        document = self.document,
-    })
+    -- ReaderHandMade removed (Bookwise debloat)
     -- Table of content controller
     self:registerModule("toc", ReaderToc:new{
         dialog = self.dialog,
@@ -389,11 +383,7 @@ function ReaderUI:init()
         view = self.view,
         ui = self
     })
-    -- book status
-    self:registerModule("status", ReaderStatus:new{
-        ui = self,
-        document = self.document,
-    })
+    -- ReaderStatus removed (Bookwise debloat)
     -- thumbnails service (book map, page browser)
     self:registerModule("thumbnail", ReaderThumbnail:new{
         ui = self,
@@ -409,11 +399,7 @@ function ReaderUI:init()
         dialog = self.dialog,
         ui = self,
     })
-    -- history view
-    self:registerModule("history", FileManagerHistory:new{
-        dialog = self.dialog,
-        ui = self,
-    })
+    -- FileManagerHistory removed (Bookwise debloat)
     -- collections/favorites view
     self:registerModule("collections", FileManagerCollection:new{
         dialog = self.dialog,
