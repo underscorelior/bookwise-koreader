@@ -817,13 +817,6 @@ To:
         })
     end
 
-    self.menu_items.cloud_storage = {
-        text = _("Cloud storage"),
-        callback = function()
-            self:onShowCloudStorage()
-        end,
-    }
-
     self.menu_items.bookwise_library = {
         text = _("Bookwise Library"),
         callback = function()
@@ -1130,12 +1123,6 @@ end
 
 function FileManagerMenu:registerToMainMenu(widget)
     table.insert(self.registered_widgets, widget)
-end
-
-function FileManagerMenu:onShowCloudStorage()
-    local CloudStorage = require("apps/cloudstorage/cloudstorage")
-    UIManager:show(CloudStorage:new{ ui = self.ui })
-    return true
 end
 
 function FileManagerMenu:onShowBookwiseLibrary()

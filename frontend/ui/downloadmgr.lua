@@ -57,13 +57,7 @@ function DownloadMgr:chooseDir(dir)
 end
 
 function DownloadMgr:chooseCloudDir()
-    local cloud_storage = require("apps/cloudstorage/cloudstorage"):new{
-        item = self.item,
-        onConfirm = function(dir_path)
-            self.onConfirm(dir_path)
-        end,
-    }
-    UIManager:show(cloud_storage)
+    -- Cloud storage removed (Bookwise debloat)
 end
 
 return DownloadMgr

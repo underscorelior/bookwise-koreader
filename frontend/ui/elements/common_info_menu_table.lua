@@ -18,11 +18,7 @@ common_info.more_tools = {
     text = _("More tools"),
 }
 
--- main tab
-if Device:hasOTAUpdates() then
-    local OTAManager = require("ui/otamanager")
-    common_info.ota_update = OTAManager:getOTAMenuTable()
-end
+-- OTA updates removed (Bookwise debloat)
 
 common_info.help = {
     text = _("Help"),
