@@ -139,23 +139,7 @@ local settingsList = {
     toggle_flash_on_pages_with_images = {category="none", event="ToggleFlashOnPagesWithImages", title=_("Toggle flashing on pages with images"), screen=true, condition=Device:hasEinkScreen(), separator=true},
     ----
 
-    -- File browser
-    set_display_mode = {category="string", event="SetDisplayMode", title=_("Set display mode"), args_func=FileManager.getDisplayModeActions, filemanager=true},
-    set_sort_by = {category="string", event="SetSortBy", title=_("Sort by"), args_func=FileManager.getSortByActions, filemanager=true},
-    set_reverse_sorting = {category="string", event="SetReverseSorting", title=_("Reverse sorting"), args={true, false}, toggle={_("on"), _("off")}, filemanager=true},
-    set_mixed_sorting = {category="string", event="SetMixedSorting", title=_("Folders and files mixed"), args={true, false}, toggle={_("on"), _("off")}, filemanager=true, separator=true},
-    ----
-    show_plus_menu = {category="none", event="ShowPlusMenu", title=_("Show plus menu"), filemanager=true},
-    toggle_select_mode = {category="none", event="ToggleSelectMode", title=_("Toggle select mode"), filemanager=true},
-    refresh_content = {category="none", event="RefreshContent", title=_("Refresh content"), filemanager=true},
-    folder_shortcuts = {category="none", event="ShowFolderShortcutsDialog", title=_("Folder shortcuts"), filemanager=true},
-    file_search = {category="none", event="ShowFileSearch", title=_("File search"), filemanager=true},
-    file_search_results = {category="none", event="ShowSearchResults", title=_("Last file search results"), filemanager=true},
-    ----
-    folder_up = {category="none", event="FolderUp", title=_("Folder up"), filemanager=true},
-    fm_go_to = {category="none", event="ShowGotoDialog", title=_("Go to page"), filemanager=true},
-    fm_back = {category="none", event="Back", title=_("Back"), filemanager=true, separator=true},
-    ----
+    -- File browser actions removed (Bookwise debloat)
     -- Reader
     show_config_menu = {category="none", event="ShowConfigMenu", title=_("Show bottom menu"), reader=true},
     toggle_status_bar = {category="none", event="ToggleFooterMode", title=_("Toggle status bar"), reader=true},
@@ -201,7 +185,7 @@ local settingsList = {
     bookmark_search = {category="none", event="SearchBookmark", title=_("Bookmark search"), reader=true},
     toggle_bookmark = {category="none", event="ToggleBookmark", title=_("Toggle bookmark"), reader=true, separator=true},
     ----
-    book_status = {category="none", event="ShowBookStatus", title=_("Book status"), reader=true},
+    -- book_status removed (Bookwise debloat)
     book_info = {category="none", event="ShowBookInfo", title=_("Book information"), reader=true},
     book_description = {category="none", event="ShowBookDescription", title=_("Book description"), reader=true},
     book_cover = {category="none", event="ShowBookCover", title=_("Book cover"), reader=true, separator=true},
@@ -211,8 +195,7 @@ local settingsList = {
     set_inverse_reading_order = {category="string", event="ToggleReadingOrder", title=_("Invert page turn taps and swipes"), reader=true, condition=Device:isTouchDevice(), args={true, false}, toggle={_("on"), _("off")}},
     toggle_inverse_reading_order = {category="none", event="ToggleReadingOrder", title=_("Toggle page turn direction"), reader=true, condition=Device:isTouchDevice()},
     toggle_page_change_animation = {category="none", event="TogglePageChangeAnimation", title=_("Toggle page turn animations"), reader=true, condition=Device:canDoSwipeAnimation()},
-    toggle_handmade_toc = {category="none", event="ToggleHandmadeToc", title=_("Toggle custom TOC"), reader=true, condition=Device:isTouchDevice() or (Device:hasDPad() and Device:useDPadAsActionKeys())},
-    toggle_handmade_flows = {category="none", event="ToggleHandmadeFlows", title=_("Toggle custom hidden flows"), reader=true, separator=true, condition=Device:isTouchDevice() or (Device:hasDPad() and Device:useDPadAsActionKeys())},
+    -- handmade toc/flows removed (Bookwise debloat)
     ----
     set_highlight_action = {category="string", event="SetHighlightAction", title=_("Set highlight action"), args_func=ReaderHighlight.getHighlightActions, reader=true},
     cycle_highlight_action = {category="none", event="CycleHighlightAction", title=_("Cycle highlight action"), reader=true},
@@ -393,23 +376,7 @@ local dispatcher_menu_order = {
     "toggle_flash_on_pages_with_images",
     ----
 
-    -- File browser
-    "set_display_mode",
-    "set_sort_by",
-    "set_reverse_sorting",
-    "set_mixed_sorting",
-    ----
-    "show_plus_menu",
-    "toggle_select_mode",
-    "refresh_content",
-    "folder_shortcuts",
-    "file_search",
-    "file_search_results",
-    ----
-    "folder_up",
-    "fm_go_to",
-    "fm_back",
-    ----
+    -- File browser actions removed (Bookwise debloat)
 
     -- Reader
     "show_config_menu",
@@ -456,7 +423,6 @@ local dispatcher_menu_order = {
     "bookmark_search",
     "toggle_bookmark",
     ----
-    "book_status",
     "book_info",
     "book_description",
     "book_cover",
@@ -466,8 +432,7 @@ local dispatcher_menu_order = {
     "set_inverse_reading_order",
     "toggle_inverse_reading_order",
     "toggle_page_change_animation",
-    "toggle_handmade_toc",
-    "toggle_handmade_flows",
+    -- handmade removed (Bookwise debloat)
     ----
     "set_highlight_action",
     "cycle_highlight_action",

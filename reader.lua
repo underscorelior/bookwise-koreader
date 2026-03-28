@@ -381,6 +381,8 @@ else
             local home_dir = G_reader_settings:readSetting("home_dir") or Device.home_dir or lfs.currentdir()
             FileManager:showFiles(home_dir)
         end
+        -- Start koremote for remote debugging (dump UI, tap, etc.)
+        require("bookwise/koremote").start()
         exit_code = UIManager:run()
     else
         local FileManager = require("apps/filemanager/filemanager")

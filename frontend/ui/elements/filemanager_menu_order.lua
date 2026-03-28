@@ -21,8 +21,6 @@ local order = {
         "start_with",
     },
     setting = {
-        -- common settings
-        -- those that don't exist will simply be skipped during menu gen
         "frontlight", -- if Device:hasFrontlight()
         "night_mode",
         "----------------------------",
@@ -35,7 +33,6 @@ local order = {
         "----------------------------",
         "language",
         "device",
-        -- end common settings
     },
     document = {
         "document_metadata_location",
@@ -46,7 +43,6 @@ local order = {
     },
     device = {
         "keyboard_layout",
-        "external_keyboard",
         "font_ui_fallbacks",
         "----------------------------",
         "time",
@@ -56,11 +52,9 @@ local order = {
         "autostandby",
         "autosuspend",
         "autoshutdown",
-        "pageturn_power", -- if Device:isKobo() and Device:hasKeys()
         "ignore_sleepcover",
         "ignore_open_sleepcover",
         "cover_events",
-        "ignore_battery_optimizations",
         "mass_storage_settings", -- if Device:canToggleMassStorage()
         "file_ext_assoc",
         "screenshot",
@@ -72,10 +66,6 @@ local order = {
         "backspace_as_back",
         "----------------------------",
         "physical_buttons_setup",
-        "----------------------------",
-        "android_volume_keys",
-        "android_haptic_feedback",
-        "android_back_button",
         "----------------------------",
         "opening_page_location_stack",
         "skim_dialog_position",
@@ -121,23 +111,18 @@ local order = {
     tools = {
         "bookwise_library",
         "read_timer",
-        "calibre",
         "exporter",
         "statistics",
-        "move_to_archive",
         "profiles",
-        "qrclipboard",
         "----------------------------",
         "more_tools",
     },
     more_tools = {
         "auto_frontlight",
         "battery_statistics",
-        "book_shortcuts",
         "synchronize_time",
         "keep_alive",
         "doc_setting_tweak",
-        "terminal",
         "----------------------------",
         "plugin_management",
         "patch_management",
@@ -149,16 +134,12 @@ local order = {
         "----------------------------",
         "dictionary_lookup",
         "dictionary_lookup_history",
-        "vocabbuilder",
         "----------------------------",
         "wikipedia_lookup",
         "wikipedia_history",
         "----------------------------",
         "file_search",
         "file_search_results",
-        "find_book_in_calibre_catalog",
-        "----------------------------",
-        "opds",
     },
     search_settings = {
         "dictionary_settings",
@@ -168,13 +149,8 @@ local order = {
         "history",
         "open_last_document",
         "----------------------------",
-        "favorites",
-        "collections",
         "bookmark_browser",
         "----------------------------",
-        "mass_storage_actions", -- if Device:canToggleMassStorage()
-        "----------------------------",
-        "ota_update", -- if Device:hasOTAUpdates()
         "help",
         "----------------------------",
         "exit_menu",
@@ -198,7 +174,6 @@ local order = {
         "poweroff", -- if Device:canPowerOff()
         "reboot", -- if Device:canReboot()
         "----------------------------",
-        "start_bq", -- if Device:isCervantes()
         "exit",
     }
 }

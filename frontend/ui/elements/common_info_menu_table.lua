@@ -23,14 +23,6 @@ common_info.more_tools = {
 common_info.help = {
     text = _("Help"),
 }
-common_info.quickstart_guide = {
-    text = _("Quickstart guide"),
-    callback = function()
-        local QuickStart = require("ui/quickstart")
-        local ReaderUI = require("apps/reader/readerui")
-        ReaderUI:showReader(QuickStart:getQuickStart())
-    end
-}
 common_info.search_menu = {
     text = _("Menu search"),
     callback = function()

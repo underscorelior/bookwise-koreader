@@ -38,10 +38,6 @@ local order = {
         "----------------------------",
         "toc_alt_toc",
         "----------------------------",
-        "handmade_toc",
-        "handmade_hidden_flows",
-        "handmade_settings",
-        "----------------------------",
         "page_map",
         "bookmarks_settings",
     },
@@ -63,11 +59,9 @@ local order = {
         "selection_text", -- if Device:hasDPad()
         "panel_zoom_options",
         "djvu_render_mode",
-        "start_content_selection", -- if Device:hasDPad(), put this as last one so it is easy to select with "press" and "up" keys
+        "start_content_selection", -- if Device:hasDPad()
     },
     setting = {
-        -- common settings
-        -- those that don't exist will simply be skipped during menu gen
         "frontlight", -- if Device:hasFrontlight()
         "night_mode",
         "----------------------------",
@@ -93,7 +87,6 @@ local order = {
     },
     device = {
         "keyboard_layout",
-        "external_keyboard",
         "font_ui_fallbacks",
         "----------------------------",
         "time",
@@ -103,26 +96,19 @@ local order = {
         "autostandby",
         "autosuspend",
         "autoshutdown",
-        "pageturn_power", -- if Device:isKobo() and Device:hasKeys()
         "ignore_sleepcover",
         "ignore_open_sleepcover",
         "cover_events",
-        "ignore_battery_optimizations",
         "mass_storage_settings", -- if Device:canToggleMassStorage()
         "file_ext_assoc",
         "screenshot",
     },
     navigation = {
         "back_to_exit",
-        "back_in_filemanager",
         "back_in_reader",
         "backspace_as_back",
         "----------------------------",
         "physical_buttons_setup",
-        "----------------------------",
-        "android_volume_keys",
-        "android_haptic_feedback",
-        "android_back_button",
         "----------------------------",
         "opening_page_location_stack",
         "skim_dialog_position",
@@ -173,24 +159,18 @@ local order = {
     },
     tools = {
         "read_timer",
-        "calibre",
         "exporter",
         "statistics",
-        "progress_sync",
-        "move_to_archive",
         "profiles",
-        "qrclipboard",
         "----------------------------",
         "more_tools",
     },
     more_tools = {
         "auto_frontlight",
         "battery_statistics",
-        "book_shortcuts",
         "synchronize_time",
         "keep_alive",
         "doc_setting_tweak",
-        "terminal",
         "----------------------------",
         "plugin_management",
         "patch_management",
@@ -200,14 +180,12 @@ local order = {
         "----------------------------",
         "dictionary_lookup",
         "dictionary_lookup_history",
-        "vocabbuilder",
         "----------------------------",
         "wikipedia_lookup",
         "wikipedia_history",
         "----------------------------",
         "translate_current_page",
         "----------------------------",
-        "find_book_in_calibre_catalog",
         "fulltext_search",
         "fulltext_search_findall_results",
         "bookmark_search",
@@ -219,30 +197,18 @@ local order = {
         "----------------------------",
         "fulltext_search_settings",
     },
-    filemanager = {},
     main = {
         "bookwise_library",
         "----------------------------",
-        "history",
-        "open_previous_document",
-        "----------------------------",
-        "favorites",
-        "collections",
         "bookmark_browser",
         "----------------------------",
-        "book_status",
         "book_info",
         "----------------------------",
-        "mass_storage_actions", -- if Device:canToggleMassStorage()
-        "----------------------------",
-        "ota_update", -- if Device:hasOTAUpdates()
         "help",
         "----------------------------",
         "exit_menu",
     },
     help = {
-        "quickstart_guide",
-        "----------------------------",
         "search_menu",
         "----------------------------",
         "report_bug",
@@ -258,7 +224,6 @@ local order = {
         "poweroff", -- if Device:canPowerOff()
         "reboot", -- if Device:canReboot()
         "----------------------------",
-        "start_bq", -- if Device:isCervantes()
         "exit",
     }
 }
