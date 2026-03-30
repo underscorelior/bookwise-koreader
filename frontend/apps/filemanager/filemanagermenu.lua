@@ -824,33 +824,7 @@ To:
         end,
     }
 
-    -- main menu tab
-    self.menu_items.open_last_document = {
-        text_func = function()
-            if not G_reader_settings:isTrue("open_last_menu_show_filename") or G_reader_settings:hasNot("lastfile") then
-                return _("Open last document")
-            end
-            local last_file = G_reader_settings:readSetting("lastfile")
-            local path, file_name = util.splitFilePathName(last_file) -- luacheck: no unused
-            return T(_("Last: %1"), BD.filename(file_name))
-        end,
-        enabled_func = function()
-            return G_reader_settings:has("lastfile")
-        end,
-        callback = function()
-            self:onOpenLastDoc()
-        end,
-        hold_callback = function()
-            local last_file = G_reader_settings:readSetting("lastfile")
-            UIManager:show(ConfirmBox:new{
-                text = T(_("Would you like to open the last document: %1?"), BD.filepath(last_file)),
-                ok_text = _("OK"),
-                ok_callback = function()
-                    self:onOpenLastDoc()
-                end,
-            })
-        end
-    }
+    -- open_last_document removed (Bookwise debloat)
     -- insert common info
     for id, common_setting in pairs(dofile("frontend/ui/elements/common_info_menu_table.lua")) do
         self.menu_items[id] = common_setting

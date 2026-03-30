@@ -2,7 +2,6 @@ local Device = require("device")
 
 local order = {
     ["KOMenu:menu_buttons"] = {
-        "filemanager_settings",
         "setting",
         "tools",
         "search",
@@ -12,12 +11,10 @@ local order = {
     filemanager_settings = {
         "filemanager_display_mode",
         "filebrowser_settings",
-        "----------------------------",
         "show_filter",
         "sort_by",
         "reverse_sorting",
         "sort_mixed",
-        "----------------------------",
         "start_with",
     },
     setting = {
@@ -146,9 +143,6 @@ local order = {
         "wikipedia_settings",
     },
     main = {
-        "history",
-        "open_last_document",
-        "----------------------------",
         "bookmark_browser",
         "----------------------------",
         "help",
