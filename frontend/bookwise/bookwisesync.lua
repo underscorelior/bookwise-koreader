@@ -21,8 +21,30 @@ local Notification = require("ui/widget/notification")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
+local json = require("dkjson")
 local logger = require("logger")
 local _ = require("gettext")
+
+local QUEUE_FILE = DataStorage:getSettingsDir() .. "/bookwise-events-queue.json"
+
+local function _readQueue()
+    local file = io.open(QUEUE_FILE, "r")
+    if not file then return {} end
+    local content = file:read("*a"); file:close()
+    if not content or content == "" then return {} end
+    local ok, result = pcall(json.decode, content)
+    if ok and type(result) == "table" then return result end
+    return {}
+end
+
+local function _writeQueue(queue)
+    local file = io.open(QUEUE_FILE, "w")
+    if not file then return false end
+    local ok, encoded = pcall(json.encode, queue)
+    if ok then file:write(encoded) end
+    file:close()
+    return ok
+end
 
 local Screen = Device.screen
 local BookwiseApi = require("bookwise/bookwiseapi")
@@ -46,8 +68,10 @@ local BookwiseSync = InputContainer:extend{
     _last_page_progress = nil,
     _restored = false,
     _periodic_sync_func = nil,       -- function ref for timer cleanup
-    _pending_sync = false,
     _xp_notif = nil,
+    _event_queue = nil,              -- in-memory queue, mirrored to QUEUE_FILE
+    _book_state_key = nil,           -- "book_state_<document_id>" — local position cache
+    _draining = false,               -- guard against re-entrant drains
 }
 
 function BookwiseSync:init()
@@ -74,12 +98,30 @@ function BookwiseSync:init()
     self._tracked_book_id = book_info.tracked_book_id
     self._document_id = book_info.document_id
     self._word_count = book_info.word_count or 0
+    self._book_state_key = "book_state_" .. tostring(self._document_id)
 
     self._api = BookwiseApi:new{
         session_id = session_id,
         server_url = self._settings:readSetting("server_url", "https://readwise.io"),
         debug = self._settings:readSetting("debug_mode") and true or false,
     }
+
+    -- Load any pending events from a previous offline session.
+    self._event_queue = _readQueue()
+
+    -- Seed the baseline from the locally cached position so we can sync
+    -- correctly even if the kindle opens this book offline. The server-side
+    -- value (from getLibrary in onReaderReady) overwrites this when available.
+    local cached = self._settings:readSetting(self._book_state_key)
+    if cached and cached.scroll_depth then
+        self._previous_scroll_depth = cached.scroll_depth
+        self._max_progress_reached = cached.scroll_depth
+        logger.info("BookwiseSync: loaded cached baseline=",
+            string.format("%.4f", cached.scroll_depth),
+            "queue_size=", #self._event_queue)
+    else
+        logger.info("BookwiseSync: no cached baseline, queue_size=", #self._event_queue)
+    end
 
     logger.info("BookwiseSync: active for", doc_path, "tracked_id=", self._tracked_book_id)
 
@@ -170,6 +212,8 @@ function BookwiseSync:_fetchAndRestore()
                 self._xp_total = math.floor(xp)
                 self._xp_at_last_sync = self._xp_total
                 logger.info("BookwiseSync: XP=", self._xp_total)
+            else
+                logger.warn("BookwiseSync: getExperience FAILED — XP tracking will retry on first sync")
             end
         end)
 
@@ -179,8 +223,13 @@ function BookwiseSync:_fetchAndRestore()
                 if book.id == self._tracked_book_id then
                     local target_progress = book.progress or 0
                     logger.info("BookwiseSync: server progress=", target_progress)
+                    -- The server is the source of truth for the chain
+                    -- baseline. Don't regress max_progress though, otherwise
+                    -- the user could re-earn XP for already-read pages when
+                    -- queued offline events haven't drained yet.
                     self._previous_scroll_depth = target_progress
-                    self._max_progress_reached = target_progress
+                    self._max_progress_reached = math.max(
+                        self._max_progress_reached or 0, target_progress)
 
                     if (not self._word_count or self._word_count == 0) and book.word_count then
                         self._word_count = book.word_count
@@ -214,7 +263,11 @@ function BookwiseSync:_restorePosition(target_progress)
             local current_depth = self:_getScrollDepth()
             if current_depth then
                 self._restored = true
-                if math.abs(current_depth - target_progress) > 0.01 then
+                -- Only jump if the server is *ahead* of where the kindle is —
+                -- e.g. user kept reading on their phone. If the kindle is
+                -- ahead (queued offline events haven't drained yet), don't
+                -- yank them back to a stale position.
+                if target_progress > current_depth + 0.01 then
                     logger.info("BookwiseSync: restoring to", string.format("%.1f%%", target_progress * 100),
                         "from", string.format("%.1f%%", current_depth * 100))
                     self:_gotoScrollDepth(target_progress)
@@ -272,54 +325,142 @@ function BookwiseSync:onPageUpdate()
     end
 
     self._last_page_progress = progress
-    self._pending_sync = true
 end
 
+-- Persist the latest known position locally so the next session has a baseline
+-- even if it opens offline. Updated whenever we queue an event.
+function BookwiseSync:_saveBookState(scroll_depth)
+    if not self._book_state_key then return end
+    self._settings:saveSetting(self._book_state_key, {
+        scroll_depth = scroll_depth,
+        updated_at = os.time(),
+    })
+    self._settings:flush()
+end
+
+-- Append the new position/XP events to the queue, persist, and try to send.
 function BookwiseSync:_doSync()
-    if not self._active then return end
     if not self.ui.document then return end
     if not self._document_id then return end
 
     local progress = self:_getScrollDepth()
     if not progress then return end
-    if math.abs(progress - self._last_synced_progress) < 0.005 then return end
 
-    self._last_synced_progress = progress
+    local pos_changed = math.abs(progress - self._last_synced_progress) >= 0.005
+    if pos_changed then
+        if self._previous_scroll_depth == nil then
+            -- First-ever sync for this book and we never got a server baseline
+            -- (no cache, getLibrary failed). Try one more time before queuing —
+            -- otherwise the queued event would have an empty reversePatch and
+            -- the backend would record the session as starting from 0%.
+            if NetworkMgr:isOnline() then
+                logger.info("BookwiseSync: baseline missing — fetching before queueing")
+                self._api:getLibrary(function(ok, books)
+                    if ok and books then
+                        for _i, book in ipairs(books) do
+                            if book.id == self._tracked_book_id then
+                                self._previous_scroll_depth = book.progress or 0
+                                self._max_progress_reached = math.max(
+                                    self._max_progress_reached, self._previous_scroll_depth)
+                                logger.info("BookwiseSync: recovered baseline=",
+                                    self._previous_scroll_depth)
+                                break
+                            end
+                        end
+                    end
+                    if self._previous_scroll_depth ~= nil then
+                        self:_doSync()
+                    else
+                        logger.warn("BookwiseSync: could not recover baseline, deferring")
+                    end
+                end)
+                return
+            else
+                -- Offline with no cached baseline — there's nothing safe to
+                -- queue. Skip and try again next tick (cache may exist by then,
+                -- or wifi may come back).
+                logger.warn("BookwiseSync: offline + no baseline, skipping sync")
+                return
+            end
+        end
 
-    local xp_total_for_event
-    if self._xp_total and self._xp_total > (self._xp_at_last_sync or 0) then
-        xp_total_for_event = self._xp_total
-    end
-
-    logger.info("BookwiseSync: syncing", string.format("%.4f", progress),
-        "total_xp=" .. (self._xp_total or 0), "session=" .. self._session_xp)
-
-    if NetworkMgr:isOnline() then
-        self._api:syncReadingProgress(self._document_id, progress, self._previous_scroll_depth,
-            xp_total_for_event, self._xp_at_last_sync,
-            function(ok, result)
+        -- One-shot retry for XP if the initial getExperience failed.
+        if self._session_xp > 0 and not self._xp_total and NetworkMgr:isOnline() then
+            logger.info("BookwiseSync: refetching XP before queueing event")
+            self._api:getExperience(function(ok, xp)
                 if ok then
-                    logger.info("BookwiseSync: sync succeeded")
-                    self._previous_scroll_depth = progress
-                    self._xp_at_last_sync = self._xp_total
-                    self._pending_sync = false
-                else
-                    logger.warn("BookwiseSync: sync failed:", result)
-                    self._pending_sync = true
+                    self._xp_total = math.floor(xp) + self._session_xp
+                    self._xp_at_last_sync = math.floor(xp)
+                    logger.info("BookwiseSync: recovered XP from server:",
+                        math.floor(xp), "total now:", self._xp_total)
                 end
+                self:_doSync()
             end)
-    else
-        self._pending_sync = true
+            return
+        end
+
+        local pos_event = self._api:buildPositionEvent(
+            self._document_id, progress, self._previous_scroll_depth)
+        table.insert(self._event_queue, pos_event)
+
+        if self._xp_total and self._xp_total > (self._xp_at_last_sync or 0) then
+            local xp_event = self._api:buildXpEvent(self._xp_total, self._xp_at_last_sync or 0)
+            table.insert(self._event_queue, xp_event)
+            self._xp_at_last_sync = self._xp_total
+        end
+
+        self._previous_scroll_depth = progress
+        self._last_synced_progress = progress
+
+        _writeQueue(self._event_queue)
+        self:_saveBookState(progress)
+
+        logger.info("BookwiseSync: queued progress=", string.format("%.4f", progress),
+            "queue_size=", #self._event_queue)
     end
+
+    if #self._event_queue > 0 and NetworkMgr:isOnline() then
+        self:_drainQueue()
+    end
+end
+
+-- Send queued events to the server. On success, remove sent events from the
+-- queue. Multiple events from a session arrive with their original timestamps,
+-- so the backend reconstructs the session correctly.
+function BookwiseSync:_drainQueue()
+    if self._draining then return end
+    if #self._event_queue == 0 then return end
+    if not NetworkMgr:isOnline() then return end
+
+    self._draining = true
+    local snapshot = {}
+    for _, e in ipairs(self._event_queue) do table.insert(snapshot, e) end
+    local sent_count = #snapshot
+
+    self._api:postEvents(snapshot, function(ok, result)
+        self._draining = false
+        if ok then
+            -- Drop the prefix we just sent.
+            local remaining = {}
+            for i = sent_count + 1, #self._event_queue do
+                table.insert(remaining, self._event_queue[i])
+            end
+            self._event_queue = remaining
+            _writeQueue(self._event_queue)
+            logger.info("BookwiseSync: drained", sent_count, "events; queue=",
+                #self._event_queue)
+        else
+            logger.warn("BookwiseSync: drain failed:", result, "queue=",
+                #self._event_queue)
+        end
+    end)
 end
 
 function BookwiseSync:_startPeriodicSync()
     local function periodicSync()
         if not self._active then return end
         if not self.ui.document then return end
-        if self._pending_sync then
-            self:_doSync()
-        end
+        self:_doSync()
         UIManager:scheduleIn(30, periodicSync)
     end
     self._periodic_sync_func = periodicSync
@@ -426,27 +567,37 @@ end
 
 function BookwiseSync:onCloseDocument()
     if not self._active then return end
-    logger.info("BookwiseSync: final sync on close")
+    logger.info("BookwiseSync: final sync on close, queue_size=", #self._event_queue)
+
+    -- Capture the very last position into the queue while the document is
+    -- still available (after this method returns the document is torn down).
+    self:_doSync()
 
     self._active = false -- prevent periodic timer from re-firing
 
-    self:_doSync()
-
-    -- If still offline, retry when connectivity returns
-    if self._pending_sync then
+    -- If we couldn't drain right now, schedule a one-shot drain when wifi is
+    -- back. The queue is also persisted to disk, so even a kindle reboot
+    -- won't lose events — the next book open will pick them up.
+    if #self._event_queue > 0 then
         local api = self._api
-        local document_id = self._document_id
-        local progress = self._last_synced_progress
-        local prev = self._previous_scroll_depth
-        local xp_total = self._xp_total
-        local xp_prev = self._xp_at_last_sync
+        local queue_snapshot = self._event_queue
         NetworkMgr:runWhenOnline(function()
-            api:syncReadingProgress(document_id, progress, prev, xp_total, xp_prev,
-                function(ok)
-                    if ok then
-                        logger.info("BookwiseSync: deferred sync succeeded")
+            api:postEvents(queue_snapshot, function(ok)
+                if ok then
+                    logger.info("BookwiseSync: deferred drain succeeded for",
+                        #queue_snapshot, "events")
+                    -- Remove the events we sent from the on-disk queue.
+                    local current = _readQueue()
+                    local sent = #queue_snapshot
+                    local remaining = {}
+                    for i = sent + 1, #current do
+                        table.insert(remaining, current[i])
                     end
-                end)
+                    _writeQueue(remaining)
+                else
+                    logger.warn("BookwiseSync: deferred drain failed; events stay queued")
+                end
+            end)
         end)
     end
 

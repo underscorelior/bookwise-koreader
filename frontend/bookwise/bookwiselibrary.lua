@@ -27,6 +27,7 @@ local RightContainer = require("ui/widget/container/rightcontainer")
 local Size = require("ui/size")
 local TextBoxWidget = require("ui/widget/textboxwidget")
 local TextWidget = require("ui/widget/textwidget")
+local TitleBar = require("ui/widget/titlebar")
 local UIManager = require("ui/uimanager")
 local UnderlineContainer = require("ui/widget/container/underlinecontainer")
 local VerticalGroup = require("ui/widget/verticalgroup")
@@ -122,6 +123,7 @@ function BookwiseMenuItem:init()
             height = cover_h,
             scale_factor = 0,
             scale_for_dpi = false,
+            file_do_cache = false,
         })
         if ok and img then
             cover_widget = CenterContainer:new{
@@ -225,6 +227,26 @@ end
 local BookwiseMenu = Menu:extend{
     items_per_page = 8,
 }
+
+function BookwiseMenu:init()
+    -- Provide a custom title bar without a close_callback so the default X
+    -- icon (which had no useful behaviour in this view) isn't rendered.
+    self.custom_title_bar = TitleBar:new{
+        width = self.width or Screen:getWidth(),
+        fullscreen = "true",
+        align = "center",
+        title = self.title,
+        title_face = self.title_face,
+        title_multilines = self.title_multilines,
+        title_shrink_font_to_fit = self.title_shrink_font_to_fit,
+        subtitle = self.subtitle,
+        left_icon = self.title_bar_left_icon,
+        left_icon_tap_callback = function() self:onLeftButtonTap() end,
+        left_icon_hold_callback = function() self:onLeftButtonHold() end,
+        show_parent = self.show_parent or self,
+    }
+    Menu.init(self)
+end
 
 function BookwiseMenu:updateItems(select_number, no_recalculate_dimen)
     self.layout = {}

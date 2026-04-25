@@ -300,6 +300,7 @@ else
 
         local DataStorage = require("datastorage")
         local LuaSettings = require("luasettings")
+        local BookwiseApi = require("bookwise/bookwiseapi")
         local BookwiseLibrary = require("bookwise/bookwiselibrary")
         local NetworkMgr = require("ui/network/manager")
         local MultiInputDialog = require("ui/widget/multiinputdialog")

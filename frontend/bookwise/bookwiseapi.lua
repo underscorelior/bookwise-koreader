@@ -237,62 +237,71 @@ function BookwiseApi:getExperience(callback)
     end)
 end
 
-function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scroll_depth, xp_total, xp_previous, callback)
+function BookwiseApi:buildPositionEvent(document_id, scroll_depth, previous_scroll_depth)
     local timestamp = math.floor(os.time() * 1000)
-    local pos_event_id = make_event_id(timestamp)
+    local event_id = make_event_id(timestamp)
     local doc_path = "/documents/" .. document_id .. "/readingPosition/scrollDepth"
 
-    local pos_reverse_patch = {}
+    local reverse_patch = {}
     if previous_scroll_depth then
-        pos_reverse_patch = {
+        reverse_patch = {
             { op = "replace", path = doc_path, value = previous_scroll_depth },
         }
     end
 
-    local events = {
-        {
-            correlationId = "0." .. pos_event_id,
-            dataUpdates = {
-                forwardPatch = {
-                    { op = "replace", path = doc_path, value = scroll_depth },
-                },
-                reversePatch = pos_reverse_patch,
-                itemsUpdated = {
-                    { id = document_id, type = "documents" },
-                },
+    return {
+        correlationId = "0." .. event_id,
+        dataUpdates = {
+            forwardPatch = {
+                { op = "replace", path = doc_path, value = scroll_depth },
             },
-            id = pos_event_id,
-            name = "reading-position-updated",
-            timestamp = timestamp,
-            environment = get_device_env(),
+            reversePatch = reverse_patch,
+            itemsUpdated = {
+                { id = document_id, type = "documents" },
+            },
         },
+        id = event_id,
+        name = "reading-position-updated",
+        timestamp = timestamp,
+        environment = get_device_env(),
     }
+end
 
-    if xp_total and xp_previous then
-        local xp_event_id = make_event_id(timestamp + 1)
-        table.insert(events, {
-            correlationId = "0." .. xp_event_id,
-            dataUpdates = {
-                forwardPatch = {
-                    { op = "replace", path = "/experience", value = xp_total },
-                },
-                reversePatch = {
-                    { op = "replace", path = "/experience", value = xp_previous },
-                },
-                itemsUpdated = {},
+function BookwiseApi:buildXpEvent(xp_total, xp_previous)
+    local timestamp = math.floor(os.time() * 1000) + 1
+    local event_id = make_event_id(timestamp)
+    return {
+        correlationId = "0." .. event_id,
+        dataUpdates = {
+            forwardPatch = {
+                { op = "replace", path = "/experience", value = xp_total },
             },
-            id = xp_event_id,
-            name = "add-experience-points",
-            timestamp = timestamp + 1,
-            userInteraction = "null",
-            environment = get_device_env(),
-        })
-    end
+            reversePatch = {
+                { op = "replace", path = "/experience", value = xp_previous },
+            },
+            itemsUpdated = {},
+        },
+        id = event_id,
+        name = "add-experience-points",
+        timestamp = timestamp,
+        userInteraction = "null",
+        environment = get_device_env(),
+    }
+end
 
+function BookwiseApi:postEvents(events, callback)
     self:_request("POST", "/reader/api/state/update/", {
         events = events,
         schemaVersion = 5,
     }, callback)
+end
+
+function BookwiseApi:syncReadingProgress(document_id, scroll_depth, previous_scroll_depth, xp_total, xp_previous, callback)
+    local events = { self:buildPositionEvent(document_id, scroll_depth, previous_scroll_depth) }
+    if xp_total and xp_previous then
+        table.insert(events, self:buildXpEvent(xp_total, xp_previous))
+    end
+    self:postEvents(events, callback)
 end
 
 return BookwiseApi
